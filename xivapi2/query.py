@@ -6,13 +6,14 @@ __all__ = ["QueryBuilder", "FilterGroup"]
 
 type Operator = Literal["=", "~", ">", "<", ">=", "<="]
 type Language = Literal["ja", "en", "de", "fr", "chs", "cht", "kr"]
+type Value = str | int | float | bool
 
 
 @dataclass(slots=True)
 class Filter:
     field: str
     operator: Operator
-    value: str | int | float | bool
+    value: Value
 
     def build(self):
         param = f'{self.field}{self.operator}'
@@ -29,7 +30,7 @@ class FilterGroup:
         self._filters: list[tuple[Filter, bool]] = []
 
     def filter(
-        self, field: str, operator: Operator, value: str | int | float | bool, *, exclude: bool = False
+        self, field: str, operator: Operator, value: Value, *, exclude: bool = False
     ) -> Self:
         self._filters.append((Filter(field, operator, value), exclude))
         return self
@@ -67,7 +68,7 @@ class QueryBuilder:
         self,
         field: str,
         operator: Operator,
-        value: str | int | float,
+        value: Value,
         *,
         exclude: bool = False,
     ) -> Self: ...
@@ -79,7 +80,7 @@ class QueryBuilder:
         self,
         field_or_group: str | FilterGroup,
         operator: Operator | None = None,
-        value: str | int | float | None = None,
+        value: Value | None = None,
         *,
         exclude: bool = False,
     ) -> Self:
