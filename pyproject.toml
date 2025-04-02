@@ -1,8 +1,11 @@
+[tool.ruff]
+line-length = 119
+
 [project]
 name = "xivapi2"
 version = "0.1.0dev1"
 description = "In early development, not ready for production use."
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "aiohttp>=3.11.14",
 ]

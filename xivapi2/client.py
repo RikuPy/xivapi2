@@ -2,13 +2,20 @@ import logging
 
 import aiohttp
 
+from xivapi2.models import SearchResults
+from xivapi2.query import QueryBuilder
+
 
 class XivApiClient:
     def __init__(self):
         self.base_url = "https://v2.xivapi.com/api"
         self._logger = logging.getLogger()
 
-    async def get_sheets(self):
+    async def search(self, query: QueryBuilder) -> SearchResults:
+        resp = await self._request(f"{self.base_url}/search?{query.build()}")
+        return SearchResults(resp["schema"], resp["results"])
+
+    async def sheets(self):
         resp = await self._request(f"{self.base_url}/sheet")
         return [s["name"] for s in resp["sheets"]]
 

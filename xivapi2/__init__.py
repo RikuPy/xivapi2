@@ -1,2 +1,2 @@
 from .client import XivApiClient
-from .query import QueryBuilder
+from .query import QueryBuilder, FilterGroup
