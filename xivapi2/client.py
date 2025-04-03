@@ -1,6 +1,6 @@
 import logging
 import urllib.parse
-from typing import overload, Literal
+from typing import Literal, overload
 
 import aiohttp
 
@@ -42,7 +42,9 @@ class XivApiClient:
             ]
             if value is not None
         }
-        response = await self._request(f"{self.base_url}/sheet/{sheet}?{urllib.parse.urlencode(query_params)}")
+        response = await self._request(
+            f"{self.base_url}/sheet/{sheet}?{urllib.parse.urlencode(query_params)}"
+        )
         return SheetResponse(
             schema=response["schema"],
             rows=[
@@ -76,7 +78,9 @@ class XivApiClient:
             ]
             if value is not None
         }
-        response = await self._request(f"{self.base_url}/sheet/{sheet}/{row}?{urllib.parse.urlencode(query_params)}")
+        response = await self._request(
+            f"{self.base_url}/sheet/{sheet}/{row}?{urllib.parse.urlencode(query_params)}"
+        )
         return RowResult(
             row_id=response["row_id"],
             subrow_id=response.get("subrow_id"),
@@ -101,11 +105,24 @@ class XivApiClient:
             ],
         )
 
-    async def get_asset(self, path: str, format_: Literal["jpg", "png", "webp"], version: str = None) -> bytes:
+    async def get_asset(
+        self, path: str, format_: Literal["jpg", "png", "webp"], *, version: str = None
+    ) -> bytes:
         query_params = {"path": path, "format": format_}
         if version:
             query_params["version"] = version
-        return await self._request(f"{self.base_url}/asset?{urllib.parse.urlencode(query_params)}", asset=True)
+        return await self._request(
+            f"{self.base_url}/asset?{urllib.parse.urlencode(query_params)}", asset=True
+        )
+
+    async def get_map(self, territory: str, index: str, *, version: str | None = None) -> bytes:
+        query_params = {}
+        if version:
+            query_params["version"] = version
+        return await self._request(
+            f"{self.base_url}/asset/map/{territory}/{index}?{urllib.parse.urlencode(query_params)}",
+            asset=True,
+        )
 
     async def versions(self):
         response = await self._request(f"{self.base_url}/version")
