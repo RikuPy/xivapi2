@@ -1,5 +1,6 @@
 import logging
 import urllib.parse
+from typing import overload, Literal
 
 import aiohttp
 
@@ -100,17 +101,32 @@ class XivApiClient:
             ],
         )
 
+    async def get_asset(self, path: str, format_: Literal["jpg", "png", "webp"], version: str = None) -> bytes:
+        query_params = {"path": path, "format": format_}
+        if version:
+            query_params["version"] = version
+        return await self._request(f"{self.base_url}/asset?{urllib.parse.urlencode(query_params)}", asset=True)
+
     async def versions(self):
         response = await self._request(f"{self.base_url}/version")
         return [Version(v["names"]) for v in response["versions"]]
 
-    async def _request(self, url: str):
+    @overload
+    async def _request(self, url: str, asset: Literal[False] = False) -> dict: ...
+
+    @overload
+    async def _request(self, url: str, asset: Literal[True]) -> bytes: ...
+
+    async def _request(self, url: str, asset: bool = False) -> dict | bytes:
         self._logger.debug(f"Requesting: {url}")
         async with aiohttp.request("GET", url) as response:
             try:
                 match response.status:
                     case 200:
-                        return await response.json()
+                        if asset:
+                            return await response.read()
+                        else:
+                            return await response.json()
                     case 429:
                         raise Exception("Rate limit exceeded")
                     case _:
