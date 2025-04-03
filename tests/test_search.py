@@ -21,10 +21,9 @@ async def test_search(client: XivApiClient):
     # fmt: on
 
     results = await client.search(query)
-    assert results
-    assert results[0]["score"] > 1.0
+    assert results[0].score > 1.0
     for result in results:
-        assert result["fields"]["Name"]
-        assert result["fields"]["Description"]
-        assert "steak" in result["fields"]["Name"].lower()
-        assert "eft" not in result["fields"]["Name"].lower()
+        assert result.fields["Name"]
+        assert result.fields["Description"]
+        assert "steak" in result.fields["Name"].lower()
+        assert "eft" not in result.fields["Name"].lower()

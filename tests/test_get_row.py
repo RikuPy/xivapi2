@@ -9,7 +9,8 @@ async def test_get_row(client: XivApiClient):
         12056,
         language="en",
     )
-    assert row["Name"] == "Lesser Panda"
-    assert row["Description"]
-    assert row["IsUntradable"] is False
-    assert row["StackSize"] == 1
+    assert row.row_id == 12056
+    assert row.fields["Name"] == "Lesser Panda"
+    assert row.fields["Description"]
+    assert row.fields["IsUntradable"] is False
+    assert row.fields["StackSize"] == 1

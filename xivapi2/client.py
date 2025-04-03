@@ -3,7 +3,7 @@ import urllib.parse
 
 import aiohttp
 
-from xivapi2.models import SearchResults
+from xivapi2.models import RowResult, SearchResponse, SearchResult, SheetResponse
 from xivapi2.query import Language, QueryBuilder
 
 
@@ -41,11 +41,19 @@ class XivApiClient:
             ]
             if value is not None
         }
-
-        resp = await self._request(
-            f"{self.base_url}/sheet/{sheet}?{urllib.parse.urlencode(query_params)}"
+        response = await self._request(f"{self.base_url}/sheet/{sheet}?{urllib.parse.urlencode(query_params)}")
+        return SheetResponse(
+            schema=response["schema"],
+            rows=[
+                RowResult(
+                    row_id=row["row_id"],
+                    subrow_id=row.get("subrow_id"),
+                    fields=row["fields"],
+                    transient=row.get("transient"),
+                )
+                for row in response["rows"]
+            ],
         )
-        return resp["rows"]
 
     async def get_sheet_row(
         self,
@@ -67,15 +75,30 @@ class XivApiClient:
             ]
             if value is not None
         }
-
-        resp = await self._request(
-            f"{self.base_url}/sheet/{sheet}/{row}?{urllib.parse.urlencode(query_params)}"
+        response = await self._request(f"{self.base_url}/sheet/{sheet}/{row}?{urllib.parse.urlencode(query_params)}")
+        return RowResult(
+            row_id=response["row_id"],
+            subrow_id=response.get("subrow_id"),
+            fields=response["fields"],
+            transient=response.get("transient"),
         )
-        return resp["fields"]
 
-    async def search(self, query: QueryBuilder) -> SearchResults:
-        resp = await self._request(f"{self.base_url}/search?{query.build()}")
-        return SearchResults(results=resp["results"], schema=resp["schema"])
+    async def search(self, query: QueryBuilder) -> SearchResponse:
+        response = await self._request(f"{self.base_url}/search?{query.build()}")
+        return SearchResponse(
+            schema=response["schema"],
+            results=[
+                SearchResult(
+                    score=result["score"],
+                    sheet=result["sheet"],
+                    row_id=result["row_id"],
+                    subrow_id=result.get("subrow_id"),
+                    fields=result["fields"],
+                    transient=result.get("transient"),
+                )
+                for result in response["results"]
+            ],
+        )
 
     async def _request(self, url: str):
         self._logger.debug(f"Requesting: {url}")
