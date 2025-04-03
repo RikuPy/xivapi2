@@ -3,7 +3,7 @@ import urllib.parse
 
 import aiohttp
 
-from xivapi2.models import RowResult, SearchResponse, SearchResult, SheetResponse
+from xivapi2.models import RowResult, SearchResponse, SearchResult, SheetResponse, Version
 from xivapi2.query import Language, QueryBuilder
 
 
@@ -99,6 +99,10 @@ class XivApiClient:
                 for result in response["results"]
             ],
         )
+
+    async def versions(self):
+        response = await self._request(f"{self.base_url}/version")
+        return [Version(v["names"]) for v in response["versions"]]
 
     async def _request(self, url: str):
         self._logger.debug(f"Requesting: {url}")

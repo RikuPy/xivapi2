@@ -53,3 +53,19 @@ class SheetResponse:
 
     def __len__(self):
         return len(self.rows)
+
+
+@dataclass(slots=True)
+class Version:
+    """
+    Represents a version of a sheet.
+    """
+    names: list[str]
+
+    def __str__(self):
+        """
+        This is kind of a hacky simplification. Currently, the versions endpoint always returns lists of one
+        version element, but it's possible this may change in the future. So, I've created a dataclass to hold
+        the entire list of names in-case that does happen, but still allow str() casting for ease of reference.
+        """
+        return self.names[0]
