@@ -4,6 +4,13 @@ from typing import Literal, overload
 
 import aiohttp
 
+from xivapi2.errors import (
+    XivApiParameterError,
+    XivApiRateLimitError,
+    XivApiNotFoundError,
+    XivApiServerError,
+    XivApiError,
+)
 from xivapi2.models import RowResult, SearchResponse, SearchResult, SheetResponse, Version
 from xivapi2.query import Language, QueryBuilder
 
@@ -144,9 +151,15 @@ class XivApiClient:
                             return await response.read()
                         else:
                             return await response.json()
+                    case 400:
+                        raise XivApiParameterError((await response.json()).get("message"))
+                    case 404:
+                        raise XivApiNotFoundError((await response.json()).get("message"))
                     case 429:
-                        raise Exception("Rate limit exceeded")
+                        raise XivApiRateLimitError((await response.json()).get("message"))
+                    case 500:
+                        raise XivApiServerError((await response.json()).get("message"))
                     case _:
-                        raise Exception(f"Error: {response.status}")
+                        raise XivApiError(f"An unknown {response.status} error code was returned from XivApi")
             except aiohttp.ContentTypeError:
-                raise Exception("Invalid response format")
+                raise XivApiError("An unknown error occurred while processing the response from XivApi")
