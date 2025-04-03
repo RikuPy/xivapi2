@@ -136,17 +136,3 @@ class QueryBuilder:
             query_params["schema"] = self._schema
 
         return urllib.parse.urlencode(query_params, quote_via=urllib.parse.quote)
-
-
-q = (
-    QueryBuilder("Item")
-    .add_fields("Name", "Description")
-    .filter("IsUntradable", "=", False)
-    .filter(
-        FilterGroup()
-        .filter("Name", "~", "Steak")
-        .filter("Name", "~", "eft", exclude=True)
-    )
-    .set_version(7.2)
-    .limit(10)
-)

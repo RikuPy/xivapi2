@@ -4,7 +4,7 @@ from xivapi2 import FilterGroup, QueryBuilder, XivApiClient
 
 
 @pytest.mark.asyncio
-async def test_search():
+async def test_search(client: XivApiClient):
     # fmt: off
     query = (
         QueryBuilder("Item")
@@ -20,7 +20,6 @@ async def test_search():
     )
     # fmt: on
 
-    client = XivApiClient()
     results = await client.search(query)
     assert results
     assert results[0]["score"] > 1.0

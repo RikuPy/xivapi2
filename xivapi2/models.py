@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 
 
-@dataclass
+@dataclass(kw_only=True)
 class SearchResults:
-    schema: str
     results: list[dict]
+    schema: str
 
     def __getitem__(self, item):
         return self.results[item]
