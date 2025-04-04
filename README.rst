@@ -1,7 +1,7 @@
 Overview
 ========
 
-xivapi2 is an asynchronous Python library for `xivapi <https://v2.xivapi.com/>`__.
+xivapi2 is an unofficial asynchronous Python library for `xivapi <https://v2.xivapi.com/>`__.
 
 Installation
 ============

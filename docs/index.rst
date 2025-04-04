@@ -8,6 +8,7 @@ xivapi2 Documentation
    readme
    xivapi2
    models
+   errors
 
 Indices and tables
 ==================

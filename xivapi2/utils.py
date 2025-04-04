@@ -4,6 +4,8 @@ import time
 from collections import deque
 from typing import Deque
 
+__all__ = ["Throttler"]
+
 
 class Throttler:
     def __init__(self, rate_limit: int, period=1.0):

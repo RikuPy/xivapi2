@@ -15,6 +15,8 @@ from xivapi2.models import RowResult, SearchResult, Version
 from xivapi2.query import Language, QueryBuilder
 from xivapi2.utils import Throttler
 
+__all__ = ["XivApiClient"]
+
 
 class XivApiClient:
     """
@@ -47,6 +49,9 @@ class XivApiClient:
 
         Returns:
             list[str]: A list of sheet names.
+
+        Raises:
+            XivApiServerError: xivapi returned an internal server error.
         """
         async with aiohttp.ClientSession(self.base_url) as session:
             response = await self._request(session, "sheet")
@@ -81,6 +86,11 @@ class XivApiClient:
 
         Returns:
             SheetResponse: An iterable containing a list of :meth:`RowResult`'s.
+
+        Raises:
+            XivApiNotFoundError: The requested sheet could not be found.
+            XivApiParameterError: One or more of the passed parameters were invalid.
+            XivApiServerError: xivapi returned an internal server error.
         """
         query_params = {
             key: value
@@ -148,6 +158,11 @@ class XivApiClient:
 
         Returns:
             RowResult: A dataclass containing the rows fields and transient data, if any is present.
+
+        Raises:
+            XivApiNotFoundError: The requested sheet or row could not be found.
+            XivApiParameterError: One or more of the passed parameters were invalid.
+            XivApiServerError: xivapi returned an internal server error.
         """
         query_params = {
             key: value
@@ -206,6 +221,10 @@ class XivApiClient:
 
         Returns:
             SearchResponse: An iterable containing the search results.
+
+        Raises:
+            XivApiParameterError: One or more of the passed search parameters were invalid.
+            XivApiServerError: xivapi returned an internal server error.
         """
         async with aiohttp.ClientSession(self.base_url) as session:
             response = await self._request(session, f"search?{query.build()}")
@@ -245,6 +264,11 @@ class XivApiClient:
 
         Returns:
             bytes: The image as bytes.
+
+        Raises:
+            XivApiNotFoundError: The requested asset could not be found.
+            XivApiParameterError: An invalid image format was specified.
+            XivApiServerError: xivapi returned an internal server error.
         """
         query_params = {"path": path, "format": format_}
         if version:
@@ -267,6 +291,11 @@ class XivApiClient:
 
         Returns:
             bytes: The map asset as bytes.
+
+        Raises:
+            XivApiNotFoundError: The requested map asset could not be found.
+            XivApiParameterError: An invalid map territory or index was specified.
+            XivApiServerError: xivapi returned an internal server error.
         """
         query_params = {}
         if version:
@@ -284,6 +313,9 @@ class XivApiClient:
 
         Returns:
             list[Version]: A list of versions understood by the API.
+
+        Raises:
+            XivApiServerError: xivapi returned an internal server error.
         """
         async with aiohttp.ClientSession(self.base_url) as session:
             response = await self._request(session, "version")
