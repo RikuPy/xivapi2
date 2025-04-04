@@ -114,6 +114,10 @@ class XivApiClient:
                     if limit and index >= limit:
                         return
 
+                # If we've requested explicit rows, skip any pagination and return immediately
+                if rows:
+                    return
+
                 query_params["after"] = response["rows"][-1]["row_id"]
                 if limit:
                     query_params["limit"] = limit - index
