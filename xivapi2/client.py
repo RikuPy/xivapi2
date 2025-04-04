@@ -16,11 +16,34 @@ from xivapi2.query import Language, QueryBuilder
 
 
 class XivApiClient:
+    """
+    An asynchronous client for `XivAPIv2 <https://v2.xivapi.com/>`__.
+
+    Example:
+        .. code:: python
+
+            import asyncio
+            from xivapi2 import XivApiClient
+
+            client = XivApiClient()
+            sheet = asyncio.run(client.get_sheet_row("Item", 12056, fields=["Name", "Description"]))
+            print(sheet.fields["Name"])  # Lesser Panda
+            print(sheet.fields["Description"])
+    """
     def __init__(self):
         self.base_url = "https://v2.xivapi.com/api"
         self._logger = logging.getLogger()
 
-    async def sheets(self):
+    async def sheets(self) -> list[str]:
+        """
+        Retrieves a list of all available sheets.
+
+        To query for rows in a specific sheet, use the :meth:`sheet_rows` method. To get detailed information about
+        a specific row, use the :meth:`get_sheet_row` method.
+
+        Returns:
+            list[str]: A list of sheet names.
+        """
         resp = await self._request(f"{self.base_url}/sheet")
         return [s["name"] for s in resp["sheets"]]
 
@@ -35,7 +58,26 @@ class XivApiClient:
         transient: str | None = None,
         language: Language | None = None,
         schema: str | None = None,
-    ):
+    ) -> SheetResponse:
+        """
+        Retrieves rows from a specific sheet.
+
+        To retrieve a list of available sheets, use the :meth:`sheets` method.
+
+        Args:
+            sheet (str): The name of the sheet to query. This is case-sensitive.
+            rows (list[int] | None): A list of row IDs to retrieve. If not provided, all rows will be queried.
+            fields (list[str] | None): A list of field names to retrieve. If not provided, all fields will be retrieved.
+            after (int | None): The row ID to start retrieving from.
+            limit (int | None): Maximum number of rows to return (up to 500).To paginate, provide the last
+                returned row to the next request's after parameter.
+            transient (str | None): Data fields to read for selected rows' transient row, if any is present.
+            language (Language | None): The default language to use for the results.
+            schema (str | None): The schema that row data should be read with.
+
+        Returns:
+            SheetResponse: An iterable containing a list of :meth:`RowResult`'s.
+        """
         query_params = {
             key: value
             for key, value in [
@@ -74,7 +116,21 @@ class XivApiClient:
         transient: str | None = None,
         language: Language | None = None,
         schema: str | None = None,
-    ):
+    ) -> RowResult:
+        """
+        Retrieves a specific row from a sheet.
+
+        Args:
+            sheet (str): The name of the sheet to query. This is case-sensitive.
+            row (int): The ID of the row to retrieve.
+            fields (list[str] | None): A list of field names to retrieve. If not provided, all fields will be retrieved.
+            transient (str | None): Data fields to read for selected rows' transient row, if any is present.
+            language (Language | None): The default language to use for the results.
+            schema (str | None): The schema that row data should be read with.
+
+        Returns:
+            RowResult: A dataclass containing the rows fields and transient data, if any is present.
+        """
         query_params = {
             key: value
             for key, value in [
@@ -96,6 +152,41 @@ class XivApiClient:
         )
 
     async def search(self, query: QueryBuilder) -> SearchResponse:
+        """
+        Searches for matching rows in a specific sheet using a query builder.
+
+        Example:
+            .. code:: python
+
+                import asyncio
+                from xivapi2 import XivApiClient
+                from xivapi2.query import QueryBuilder, FilterGroup
+
+                client = XivApiClient()
+                query = (
+                    QueryBuilder("Item")
+                    .add_fields("Name", "Description")
+                    .filter("IsUntradable", "=", False)
+                    .filter(
+                        FilterGroup()
+                        .filter("Name", "~", "Steak")
+                        .filter("Name", "~", "eft", exclude=True)
+                    )
+                    .set_version(7.2)
+                    .limit(10)
+                )
+                search_results = asyncio.run(client.search(query))
+                for result in search_results:
+                    print(f"[{result.row_id}] {result.fields['Name']}")
+                    print(result.fields["Description"])
+                    print("-" * 32)
+
+        Args:
+            query (QueryBuilder): The query builder object containing the search parameters.
+
+        Returns:
+            SearchResponse: An iterable containing the search results.
+        """
         response = await self._request(f"{self.base_url}/search?{query.build()}")
         return SearchResponse(
             schema=response["schema"],
@@ -115,6 +206,17 @@ class XivApiClient:
     async def get_asset(
         self, path: str, format_: Literal["jpg", "png", "webp"], *, version: str = None
     ) -> bytes:
+        """
+        Retrieves an asset from the XivAPI as bytes.
+
+        Args:
+            path (str): The path to the asset. Paths to icons and other assets can be found in their relevant sheets.
+            format_ (str): The format of the asset. Can be "jpg", "png", or "webp".
+            version (str | None): The version of the asset to retrieve. Defaults to the latest version.
+
+        Returns:
+            bytes: The image as bytes.
+        """
         query_params = {"path": path, "format": format_}
         if version:
             query_params["version"] = version
@@ -123,6 +225,19 @@ class XivApiClient:
         )
 
     async def get_map(self, territory: str, index: str, *, version: str | None = None) -> bytes:
+        """
+        Composes and returns a map asset image as bytes.
+
+        Args:
+            territory (str): Territory of the map to be retrieved. This typically takes the form of 4 characters,
+                [letter][number][letter][number].
+            index (str): Index of the map within the territory. This invariably takes the form of a two-digit
+                zero-padded number..
+            version (str | None): The version of the asset to retrieve. Defaults to the latest version.
+
+        Returns:
+            bytes: The map asset as bytes.
+        """
         query_params = {}
         if version:
             query_params["version"] = version
@@ -132,6 +247,12 @@ class XivApiClient:
         )
 
     async def versions(self):
+        """
+        Returns metadata about the versions recorded by the boilmaster system
+
+        Returns:
+            list[Version]: A list of versions understood by the API.
+        """
         response = await self._request(f"{self.base_url}/version")
         return [Version(v["names"]) for v in response["versions"]]
 
