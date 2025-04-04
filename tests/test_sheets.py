@@ -1,9 +1,6 @@
-import pytest
-
 from xivapi2.client import XivApiClient
 
 
-@pytest.mark.asyncio
 async def test_sheets(client: XivApiClient):
     sheets = await client.sheets()
     assert sheets

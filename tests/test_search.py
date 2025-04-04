@@ -1,9 +1,6 @@
-import pytest
-
 from xivapi2 import FilterGroup, QueryBuilder, XivApiClient
 
 
-@pytest.mark.asyncio
 async def test_search(client: XivApiClient):
     # fmt: off
     query = (
@@ -29,7 +26,6 @@ async def test_search(client: XivApiClient):
         assert "eft" not in result.fields["Name"].lower()
 
 
-@pytest.mark.asyncio
 async def test_paginated_search(client: XivApiClient):
     # fmt: off
     query = (

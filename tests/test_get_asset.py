@@ -1,12 +1,10 @@
 import io
 
-import pytest
 from PIL import Image
 
 from xivapi2 import XivApiClient
 
 
-@pytest.mark.asyncio
 async def test_get_asset(client: XivApiClient):
     png = await client.get_asset("ui/icon/059000/059534.tex", "png")
     assert png

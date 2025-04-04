@@ -1,7 +1,3 @@
-import pytest
-
-
-@pytest.mark.asyncio
 async def test_version_names(client):
     versions = await client.versions()
     assert versions
