@@ -35,7 +35,7 @@ class XivApiClient:
     def __init__(self):
         self.base_url = "https://v2.xivapi.com/api/"
         self._logger = logging.getLogger()
-        self._throttler = Throttler(1, 1.0)
+        self._throttler = Throttler(5, 1.0)
         self._session: aiohttp.ClientSession | None = None
 
     async def sheets(self) -> list[str]:
@@ -177,24 +177,25 @@ class XivApiClient:
                 from xivapi2 import XivApiClient
                 from xivapi2.query import QueryBuilder, FilterGroup
 
-                client = XivApiClient()
-                query = (
-                    QueryBuilder("Item")
-                    .add_fields("Name", "Description")
-                    .filter("IsUntradable", "=", False)
-                    .filter(
-                        FilterGroup()
-                        .filter("Name", "~", "Steak")
-                        .filter("Name", "~", "eft", exclude=True)
+                async def main():
+                    client = XivApiClient()
+                    query = (
+                        QueryBuilder("Item")
+                        .add_fields("Name", "Description")
+                        .filter("IsUntradable", "=", False)
+                        .filter(
+                            FilterGroup()
+                            .filter("Name", "~", "Steak")
+                            .filter("Name", "~", "eft", exclude=True)
+                        )
+                        .set_version(7.2)
+                        .limit(10)
                     )
-                    .set_version(7.2)
-                    .limit(10)
-                )
-                search_results = asyncio.run(client.search(query))
-                for result in search_results:
-                    print(f"[{result.row_id}] {result.fields['Name']}")
-                    print(result.fields["Description"])
-                    print("-" * 32)
+                    async for result in client.search(query):
+                        print(f"[{result.row_id}] {result.fields['Name']}")
+                        print(result.fields["Description"])
+                        print("-" * 32)
+                asyncio.run(main())
 
         Args:
             query (QueryBuilder): The query builder object containing the search parameters.
