@@ -33,9 +33,10 @@ class XivApiClient:
             print(sheet.fields["Description"])
     """
     def __init__(self):
-        self.base_url = "https://v2.xivapi.com/api"
+        self.base_url = "https://v2.xivapi.com/api/"
         self._logger = logging.getLogger()
         self._throttler = Throttler(5, 1.0)
+        self._session: aiohttp.ClientSession | None = None
 
     async def sheets(self) -> list[str]:
         """
@@ -93,30 +94,27 @@ class XivApiClient:
             ]
             if value is not None
         }
-        response = await self._request(
-            f"{self.base_url}/sheet/{sheet}?{urllib.parse.urlencode(query_params)}"
-        )
+        async with aiohttp.ClientSession(self.base_url) as session:
+            response = await self._request(session, f"sheet/{sheet}?{urllib.parse.urlencode(query_params)}")
 
-        index = 0
-        while response["rows"]:
-            for row in response["rows"]:
-                yield RowResult(
-                    row_id=row["row_id"],
-                    subrow_id=row.get("subrow_id"),
-                    fields=row["fields"],
-                    transient=row.get("transient"),
-                )
+            index = 0
+            while response["rows"]:
+                for row in response["rows"]:
+                    yield RowResult(
+                        row_id=row["row_id"],
+                        subrow_id=row.get("subrow_id"),
+                        fields=row["fields"],
+                        transient=row.get("transient"),
+                    )
 
-                index += 1
-                if limit and index >= limit:
-                    return
+                    index += 1
+                    if limit and index >= limit:
+                        return
 
-            query_params["after"] = response["rows"][-1]["row_id"]
-            if limit:
-                query_params["limit"] = limit - index
-            response = await self._request(
-                f"{self.base_url}/sheet/{sheet}?{urllib.parse.urlencode(query_params)}"
-            )
+                query_params["after"] = response["rows"][-1]["row_id"]
+                if limit:
+                    query_params["limit"] = limit - index
+                response = await self._request(session, f"sheet/{sheet}?{urllib.parse.urlencode(query_params)}")
 
     async def get_sheet_row(
         self,
@@ -268,15 +266,15 @@ class XivApiClient:
         return [Version(v["names"]) for v in response["versions"]]
 
     @overload
-    async def _request(self, url: str, asset: Literal[False] = False) -> dict: ...
+    async def _request(self, session: aiohttp.ClientSession, url: str, asset: Literal[False] = False) -> dict: ...
 
     @overload
-    async def _request(self, url: str, asset: Literal[True]) -> bytes: ...
+    async def _request(self, session: aiohttp.ClientSession, url: str, asset: Literal[True]) -> bytes: ...
 
-    async def _request(self, url: str, asset: bool = False) -> dict | bytes:
+    async def _request(self, session: aiohttp.ClientSession, url: str, asset: bool = False) -> dict | bytes:
         self._logger.debug(f"Requesting: {url}")
         async with self._throttler:
-            async with aiohttp.request("GET", url) as response:
+            async with session.request("GET", url) as response:
                 try:
                     match response.status:
                         case 200:
@@ -296,3 +294,15 @@ class XivApiClient:
                             raise XivApiError(f"An unknown {response.status} error code was returned from XivApi")
                 except aiohttp.ContentTypeError:
                     raise XivApiError("An unknown error occurred while processing the response from XivApi")
+
+    @property
+    def session(self) -> aiohttp.ClientSession:
+        """
+        Returns the current aiohttp session. If no session exists, a new one will be created.
+
+        Returns:
+            aiohttp.ClientSession: The current aiohttp session.
+        """
+        if self._session is None:
+            self._session = aiohttp.ClientSession()
+        return self._session
