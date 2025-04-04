@@ -108,7 +108,7 @@ class QueryBuilder:
         self._sheets: list[str] = list(sheets)
         self._filters: list[tuple[Filter | FilterGroup, bool]] = []
         self._limit: int | None = None
-        self._version: str | None = None
+        self._version: str | float | None = None
         self._lang: str | None = None
         self._schema: str | None = None
 
@@ -292,9 +292,9 @@ class QueryBuilder:
                 f"{'-' if exclude else '+'}{filter_.build()}" for filter_, exclude in self._filters
             )
         if self._limit:
-            query_params["limit"] = self._limit
+            query_params["limit"] = str(self._limit)
         if self._version:
-            query_params["version"] = self._version
+            query_params["version"] = str(self._version)
         if self._lang:
             query_params["language"] = self._lang
         if self._schema:

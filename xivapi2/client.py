@@ -233,7 +233,7 @@ class XivApiClient:
                     return
 
     async def get_asset(
-        self, path: str, format_: Literal["jpg", "png", "webp"], *, version: str = None
+        self, path: str, format_: Literal["jpg", "png", "webp"], *, version: str | None = None
     ) -> bytes:
         """
         Retrieves an asset from the XivAPI as bytes.
