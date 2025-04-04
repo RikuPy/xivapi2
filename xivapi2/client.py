@@ -1,6 +1,6 @@
 import logging
 import urllib.parse
-from typing import Literal, overload
+from typing import Literal, overload, Any, AsyncGenerator
 
 import aiohttp
 
@@ -58,7 +58,7 @@ class XivApiClient:
         transient: str | None = None,
         language: Language | None = None,
         schema: str | None = None,
-    ) -> SheetResponse:
+    ) -> AsyncGenerator[RowResult]:
         """
         Retrieves rows from a specific sheet.
 
@@ -69,8 +69,7 @@ class XivApiClient:
             rows (list[int] | None): A list of row IDs to retrieve. If not provided, all rows will be queried.
             fields (list[str] | None): A list of field names to retrieve. If not provided, all fields will be retrieved.
             after (int | None): The row ID to start retrieving from.
-            limit (int | None): Maximum number of rows to return (up to 500).To paginate, provide the last
-                returned row to the next request's after parameter.
+            limit (int | None): Maximum number of rows to return (up to 500). Defaults to 500.
             transient (str | None): Data fields to read for selected rows' transient row, if any is present.
             language (Language | None): The default language to use for the results.
             schema (str | None): The schema that row data should be read with.
@@ -84,7 +83,7 @@ class XivApiClient:
                 ("rows", ",".join(map(str, rows)) if rows else None),
                 ("fields", ",".join(fields) if fields else None),
                 ("after", after),
-                ("limit", limit),
+                ("limit", limit or 500),
                 ("transient", transient),
                 ("language", language),
                 ("schema", schema),
@@ -94,18 +93,27 @@ class XivApiClient:
         response = await self._request(
             f"{self.base_url}/sheet/{sheet}?{urllib.parse.urlencode(query_params)}"
         )
-        return SheetResponse(
-            schema=response["schema"],
-            rows=[
-                RowResult(
+
+        index = 0
+        while response["rows"]:
+            for row in response["rows"]:
+                yield RowResult(
                     row_id=row["row_id"],
                     subrow_id=row.get("subrow_id"),
                     fields=row["fields"],
                     transient=row.get("transient"),
                 )
-                for row in response["rows"]
-            ],
-        )
+
+                index += 1
+                if limit and index >= limit:
+                    break
+
+            query_params["after"] = response["rows"][-1]["row_id"]
+            if limit:
+                query_params["limit"] = limit - index
+            response = await self._request(
+                f"{self.base_url}/sheet/{sheet}?{urllib.parse.urlencode(query_params)}"
+            )
 
     async def get_sheet_row(
         self,
