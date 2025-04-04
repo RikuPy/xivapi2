@@ -74,7 +74,7 @@ class XivApiClient:
             rows (list[int] | None): A list of row IDs to retrieve. If not provided, all rows will be queried.
             fields (list[str] | None): A list of field names to retrieve. If not provided, all fields will be retrieved.
             after (int | None): The row ID to start retrieving from.
-            limit (int | None): Maximum number of rows to return (up to 500). Defaults to 500.
+            limit (int | None): Maximum number of rows to return.
             transient (str | None): Data fields to read for selected rows' transient row, if any is present.
             language (Language | None): The default language to use for the results.
             schema (str | None): The schema that row data should be read with.

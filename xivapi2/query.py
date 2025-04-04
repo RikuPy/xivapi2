@@ -207,7 +207,7 @@ class QueryBuilder:
         Sets the maximum number of results to return.
 
         Args:
-            limit (int): The maximum number of results (up to 500) to return.
+            limit (int): The maximum number of results to return.
 
         Returns:
             Self: The current instance of QueryBuilder for method chaining.
