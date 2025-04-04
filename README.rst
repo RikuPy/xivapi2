@@ -19,7 +19,7 @@ Interacting with sheets
 -----------------------
 
 To get a list of sheets currently supported by xivapi, you can use the
-``get_sheets`` method:
+``sheets`` method:
 
 .. code:: python
 
@@ -28,11 +28,11 @@ To get a list of sheets currently supported by xivapi, you can use the
 
     async def main():
         client = XivApiClient()
-        sheets = await client.get_sheets()
+        sheets = await client.sheets()
         for sheet in sheets:
             print(sheet)
 
-    sheets = asyncio.run(main())
+    asyncio.run(main())
 
 
 To list what rows a specific sheet has, you can use the
