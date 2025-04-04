@@ -17,6 +17,22 @@ async def test_get_row(client: XivApiClient):
     assert row.fields["StackSize"] == 1
 
 
+async def test_get_row_with_explicit_fields_and_transients(client: XivApiClient):
+    row = await client.get_sheet_row(
+        "Companion",
+        141,
+        language="en",
+        fields=["Singular"],
+        transients=["Description", "DescriptionEnhanced"],
+    )
+    assert row.row_id == 141
+    assert len(row.fields) == 1
+    assert row.fields["Singular"] == "lesser panda"
+    assert len(row.transients) == 2
+    assert row.transients["Description"]
+    assert row.transients["DescriptionEnhanced"]
+
+
 async def test_400_response(client: XivApiClient):
     with pytest.raises(XivApiParameterError):
         row = await client.get_sheet_row(
