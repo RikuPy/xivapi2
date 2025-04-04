@@ -1,18 +1,19 @@
 import logging
 import urllib.parse
-from typing import Literal, overload
+from typing import AsyncGenerator, Literal, overload
 
 import aiohttp
 
 from xivapi2.errors import (
+    XivApiError,
+    XivApiNotFoundError,
     XivApiParameterError,
     XivApiRateLimitError,
-    XivApiNotFoundError,
     XivApiServerError,
-    XivApiError,
 )
-from xivapi2.models import RowResult, SearchResponse, SearchResult, SheetResponse, Version
+from xivapi2.models import RowResult, SearchResult, Version
 from xivapi2.query import Language, QueryBuilder
+from xivapi2.utils import Throttler
 
 
 class XivApiClient:
@@ -30,9 +31,12 @@ class XivApiClient:
             print(sheet.fields["Name"])  # Lesser Panda
             print(sheet.fields["Description"])
     """
+
     def __init__(self):
-        self.base_url = "https://v2.xivapi.com/api"
+        self.base_url = "https://v2.xivapi.com/api/"
         self._logger = logging.getLogger()
+        self._throttler = Throttler(5, 1.0)
+        self._session: aiohttp.ClientSession | None = None
 
     async def sheets(self) -> list[str]:
         """
@@ -44,8 +48,9 @@ class XivApiClient:
         Returns:
             list[str]: A list of sheet names.
         """
-        resp = await self._request(f"{self.base_url}/sheet")
-        return [s["name"] for s in resp["sheets"]]
+        async with aiohttp.ClientSession(self.base_url) as session:
+            response = await self._request(session, "sheet")
+        return [s["name"] for s in response["sheets"]]
 
     async def sheet_rows(
         self,
@@ -58,7 +63,7 @@ class XivApiClient:
         transient: str | None = None,
         language: Language | None = None,
         schema: str | None = None,
-    ) -> SheetResponse:
+    ) -> AsyncGenerator[RowResult, None]:
         """
         Retrieves rows from a specific sheet.
 
@@ -69,8 +74,7 @@ class XivApiClient:
             rows (list[int] | None): A list of row IDs to retrieve. If not provided, all rows will be queried.
             fields (list[str] | None): A list of field names to retrieve. If not provided, all fields will be retrieved.
             after (int | None): The row ID to start retrieving from.
-            limit (int | None): Maximum number of rows to return (up to 500).To paginate, provide the last
-                returned row to the next request's after parameter.
+            limit (int | None): Maximum number of rows to return (up to 500). Defaults to 500.
             transient (str | None): Data fields to read for selected rows' transient row, if any is present.
             language (Language | None): The default language to use for the results.
             schema (str | None): The schema that row data should be read with.
@@ -84,28 +88,38 @@ class XivApiClient:
                 ("rows", ",".join(map(str, rows)) if rows else None),
                 ("fields", ",".join(fields) if fields else None),
                 ("after", after),
-                ("limit", limit),
+                ("limit", limit or 500),
                 ("transient", transient),
                 ("language", language),
                 ("schema", schema),
             ]
             if value is not None
         }
-        response = await self._request(
-            f"{self.base_url}/sheet/{sheet}?{urllib.parse.urlencode(query_params)}"
-        )
-        return SheetResponse(
-            schema=response["schema"],
-            rows=[
-                RowResult(
-                    row_id=row["row_id"],
-                    subrow_id=row.get("subrow_id"),
-                    fields=row["fields"],
-                    transient=row.get("transient"),
+        async with aiohttp.ClientSession(self.base_url) as session:
+            response = await self._request(
+                session, f"sheet/{sheet}?{urllib.parse.urlencode(query_params)}"
+            )
+
+            index = 0
+            while response["rows"]:
+                for row in response["rows"]:
+                    yield RowResult(
+                        row_id=row["row_id"],
+                        subrow_id=row.get("subrow_id"),
+                        fields=row["fields"],
+                        transient=row.get("transient"),
+                    )
+
+                    index += 1
+                    if limit and index >= limit:
+                        return
+
+                query_params["after"] = response["rows"][-1]["row_id"]
+                if limit:
+                    query_params["limit"] = limit - index
+                response = await self._request(
+                    session, f"sheet/{sheet}?{urllib.parse.urlencode(query_params)}"
                 )
-                for row in response["rows"]
-            ],
-        )
 
     async def get_sheet_row(
         self,
@@ -141,17 +155,18 @@ class XivApiClient:
             ]
             if value is not None
         }
-        response = await self._request(
-            f"{self.base_url}/sheet/{sheet}/{row}?{urllib.parse.urlencode(query_params)}"
-        )
-        return RowResult(
-            row_id=response["row_id"],
-            subrow_id=response.get("subrow_id"),
-            fields=response["fields"],
-            transient=response.get("transient"),
-        )
+        async with aiohttp.ClientSession(self.base_url) as session:
+            response = await self._request(
+                session, f"sheet/{sheet}/{row}?{urllib.parse.urlencode(query_params)}"
+            )
+            return RowResult(
+                row_id=response["row_id"],
+                subrow_id=response.get("subrow_id"),
+                fields=response["fields"],
+                transient=response.get("transient"),
+            )
 
-    async def search(self, query: QueryBuilder) -> SearchResponse:
+    async def search(self, query: QueryBuilder) -> AsyncGenerator[SearchResult, None]:
         """
         Searches for matching rows in a specific sheet using a query builder.
 
@@ -162,24 +177,25 @@ class XivApiClient:
                 from xivapi2 import XivApiClient
                 from xivapi2.query import QueryBuilder, FilterGroup
 
-                client = XivApiClient()
-                query = (
-                    QueryBuilder("Item")
-                    .add_fields("Name", "Description")
-                    .filter("IsUntradable", "=", False)
-                    .filter(
-                        FilterGroup()
-                        .filter("Name", "~", "Steak")
-                        .filter("Name", "~", "eft", exclude=True)
+                async def main():
+                    client = XivApiClient()
+                    query = (
+                        QueryBuilder("Item")
+                        .add_fields("Name", "Description")
+                        .filter("IsUntradable", "=", False)
+                        .filter(
+                            FilterGroup()
+                            .filter("Name", "~", "Steak")
+                            .filter("Name", "~", "eft", exclude=True)
+                        )
+                        .set_version(7.2)
+                        .limit(10)
                     )
-                    .set_version(7.2)
-                    .limit(10)
-                )
-                search_results = asyncio.run(client.search(query))
-                for result in search_results:
-                    print(f"[{result.row_id}] {result.fields['Name']}")
-                    print(result.fields["Description"])
-                    print("-" * 32)
+                    async for result in client.search(query):
+                        print(f"[{result.row_id}] {result.fields['Name']}")
+                        print(result.fields["Description"])
+                        print("-" * 32)
+                asyncio.run(main())
 
         Args:
             query (QueryBuilder): The query builder object containing the search parameters.
@@ -187,21 +203,30 @@ class XivApiClient:
         Returns:
             SearchResponse: An iterable containing the search results.
         """
-        response = await self._request(f"{self.base_url}/search?{query.build()}")
-        return SearchResponse(
-            schema=response["schema"],
-            results=[
-                SearchResult(
-                    score=result["score"],
-                    sheet=result["sheet"],
-                    row_id=result["row_id"],
-                    subrow_id=result.get("subrow_id"),
-                    fields=result["fields"],
-                    transient=result.get("transient"),
-                )
-                for result in response["results"]
-            ],
-        )
+        async with aiohttp.ClientSession(self.base_url) as session:
+            response = await self._request(session, f"search?{query.build()}")
+
+            index = 0
+            while True:
+                for result in response["results"]:
+                    yield SearchResult(
+                        score=result["score"],
+                        sheet=result["sheet"],
+                        row_id=result["row_id"],
+                        subrow_id=result.get("subrow_id"),
+                        fields=result["fields"],
+                        transient=result.get("transient"),
+                    )
+
+                    index += 1
+                    if query.get_limit() and index >= query.get_limit():
+                        return
+
+                cursor = response.get("next")
+                if cursor:
+                    response = await self._request(session, f"search?{query.build(cursor=cursor)}")
+                else:
+                    return
 
     async def get_asset(
         self, path: str, format_: Literal["jpg", "png", "webp"], *, version: str = None
@@ -220,9 +245,10 @@ class XivApiClient:
         query_params = {"path": path, "format": format_}
         if version:
             query_params["version"] = version
-        return await self._request(
-            f"{self.base_url}/asset?{urllib.parse.urlencode(query_params)}", asset=True
-        )
+        async with aiohttp.ClientSession(self.base_url) as session:
+            return await self._request(
+                session, f"asset?{urllib.parse.urlencode(query_params)}", asset=True
+            )
 
     async def get_map(self, territory: str, index: str, *, version: str | None = None) -> bytes:
         """
@@ -241,10 +267,12 @@ class XivApiClient:
         query_params = {}
         if version:
             query_params["version"] = version
-        return await self._request(
-            f"{self.base_url}/asset/map/{territory}/{index}?{urllib.parse.urlencode(query_params)}",
-            asset=True,
-        )
+        async with aiohttp.ClientSession(self.base_url) as session:
+            return await self._request(
+                session,
+                f"asset/map/{territory}/{index}?{urllib.parse.urlencode(query_params)}",
+                asset=True,
+            )
 
     async def versions(self):
         """
@@ -253,34 +281,46 @@ class XivApiClient:
         Returns:
             list[Version]: A list of versions understood by the API.
         """
-        response = await self._request(f"{self.base_url}/version")
+        async with aiohttp.ClientSession(self.base_url) as session:
+            response = await self._request(session, "version")
         return [Version(v["names"]) for v in response["versions"]]
 
     @overload
-    async def _request(self, url: str, asset: Literal[False] = False) -> dict: ...
+    async def _request(
+        self, session: aiohttp.ClientSession, url: str, asset: Literal[False] = False
+    ) -> dict: ...
 
     @overload
-    async def _request(self, url: str, asset: Literal[True]) -> bytes: ...
+    async def _request(
+        self, session: aiohttp.ClientSession, url: str, asset: Literal[True]
+    ) -> bytes: ...
 
-    async def _request(self, url: str, asset: bool = False) -> dict | bytes:
+    async def _request(
+        self, session: aiohttp.ClientSession, url: str, asset: bool = False
+    ) -> dict | bytes:
         self._logger.debug(f"Requesting: {url}")
-        async with aiohttp.request("GET", url) as response:
-            try:
-                match response.status:
-                    case 200:
-                        if asset:
-                            return await response.read()
-                        else:
-                            return await response.json()
-                    case 400:
-                        raise XivApiParameterError((await response.json()).get("message"))
-                    case 404:
-                        raise XivApiNotFoundError((await response.json()).get("message"))
-                    case 429:
-                        raise XivApiRateLimitError((await response.json()).get("message"))
-                    case 500:
-                        raise XivApiServerError((await response.json()).get("message"))
-                    case _:
-                        raise XivApiError(f"An unknown {response.status} error code was returned from XivApi")
-            except aiohttp.ContentTypeError:
-                raise XivApiError("An unknown error occurred while processing the response from XivApi")
+        async with self._throttler:
+            async with session.request("GET", url) as response:
+                try:
+                    match response.status:
+                        case 200:
+                            if asset:
+                                return await response.read()
+                            else:
+                                return await response.json()
+                        case 400:
+                            raise XivApiParameterError((await response.json()).get("message"))
+                        case 404:
+                            raise XivApiNotFoundError((await response.json()).get("message"))
+                        case 429:
+                            raise XivApiRateLimitError((await response.json()).get("message"))
+                        case 500:
+                            raise XivApiServerError((await response.json()).get("message"))
+                        case _:
+                            raise XivApiError(
+                                f"An unknown {response.status} error code was returned from XivApi"
+                            )
+                except aiohttp.ContentTypeError:
+                    raise XivApiError(
+                        "An unknown error occurred while processing the response from XivApi"
+                    )

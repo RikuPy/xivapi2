@@ -45,8 +45,7 @@ To list what rows a specific sheet has, you can use the
 
     async def main():
         client = XivApiClient()
-        rows = await client.sheet_rows("Item", fields=["Name", "Description"])
-        for row in rows:
+        async for row in client.sheet_rows("Item", fields=["Name", "Description"], limit=40):
             print(f"ID: {row.row_id}, Name: {row.fields["Name"]}, Description: {row.fields["Description"]}")
 
     asyncio.run(main())
@@ -98,8 +97,7 @@ Then, pass the constructed query to the clients ``search`` method,
 
     async def main(query):
         client = XivApiClient()
-        results = await client.search(query)
-        for result in results:
+        async for result in client.search(query):
             print(result.fields["Name"])
             print(result.fields["Description"])
 
