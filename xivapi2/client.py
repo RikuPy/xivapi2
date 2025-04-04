@@ -63,7 +63,7 @@ class XivApiClient:
         transient: str | None = None,
         language: Language | None = None,
         schema: str | None = None,
-    ) -> AsyncGenerator[RowResult]:
+    ) -> AsyncGenerator[RowResult, None]:
         """
         Retrieves rows from a specific sheet.
 
@@ -166,7 +166,7 @@ class XivApiClient:
                 transient=response.get("transient"),
             )
 
-    async def search(self, query: QueryBuilder) -> AsyncGenerator[SearchResult]:
+    async def search(self, query: QueryBuilder) -> AsyncGenerator[SearchResult, None]:
         """
         Searches for matching rows in a specific sheet using a query builder.
 
