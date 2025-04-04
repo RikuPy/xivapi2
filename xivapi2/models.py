@@ -18,6 +18,7 @@ class SearchResult:
         fields (dict): The fields of the search result.
         transients (dict): Transient data, when relevant.
     """
+
     score: float
     sheet: str
     row_id: int
@@ -35,6 +36,7 @@ class SearchResponse:
         schema (str): The schema of the search response.
         results (list[SearchResult]): A list of search results.
     """
+
     schema: str
     results: list[SearchResult]
 
@@ -62,6 +64,7 @@ class RowResult:
         fields (dict): The fields of the row result.
         transients (dict): Transient data, when relevant.
     """
+
     row_id: int
     subrow_id: int | None = None
     fields: dict
@@ -77,6 +80,7 @@ class SheetResponse:
         schema (str): The schema of the sheet response.
         rows (list[RowResult]): A list of row results.
     """
+
     schema: str
     rows: list[RowResult]
 
@@ -98,6 +102,7 @@ class Version:
     """
     Represents a game version understood by the API.
     """
+
     names: list[str]
 
     def __str__(self):

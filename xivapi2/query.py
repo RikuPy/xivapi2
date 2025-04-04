@@ -21,6 +21,7 @@ class Filter:
         operator (Operator): The operator to use for the filter.
         value (Value): The value to filter by.
     """
+
     field: str
     operator: Operator
     value: Value
@@ -32,7 +33,7 @@ class Filter:
         Returns:
             str: The compiled filter string.
         """
-        param = f'{self.field}{self.operator}'
+        param = f"{self.field}{self.operator}"
         if isinstance(self.value, str):
             param += f'"{self.value.replace('"', "%22")}"'
         else:
@@ -48,6 +49,7 @@ class FilterGroup:
     For more information on how grouped clauses work, refer to the XivAPI documentation:
     https://v2.xivapi.com/docs/guides/search/#filtering-results
     """
+
     def __init__(self):
         self._filters: list[tuple[Filter, bool]] = []
 
@@ -78,7 +80,9 @@ class FilterGroup:
         Returns:
             str: The compiled filter group string.
         """
-        filters_ = " ".join(f"{'-' if exclude else '+'}{filter_.build()}" for filter_, exclude in self._filters)
+        filters_ = " ".join(
+            f"{'-' if exclude else '+'}{filter_.build()}" for filter_, exclude in self._filters
+        )
         return f"({filters_})"
 
 
@@ -102,6 +106,7 @@ class QueryBuilder:
                 .limit(10)
             )
     """
+
     def __init__(self, *sheets: str):
         self._fields: list[str] = []
         self._transients: list[str] = []
@@ -198,7 +203,9 @@ class QueryBuilder:
         elif isinstance(field_or_group, FilterGroup):
             self._filters.append((field_or_group, exclude))
         else:
-            raise TypeError("field_or_group must be a string containing a field name or a FilterGroup instance")
+            raise TypeError(
+                "field_or_group must be a string containing a field name or a FilterGroup instance"
+            )
 
         return self
 
