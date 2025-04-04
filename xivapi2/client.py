@@ -1,18 +1,17 @@
 import logging
-import time
 import urllib.parse
-from typing import Literal, overload, Any, AsyncGenerator
+from typing import AsyncGenerator, Literal, overload
 
 import aiohttp
 
 from xivapi2.errors import (
+    XivApiError,
+    XivApiNotFoundError,
     XivApiParameterError,
     XivApiRateLimitError,
-    XivApiNotFoundError,
     XivApiServerError,
-    XivApiError,
 )
-from xivapi2.models import RowResult, SearchResponse, SearchResult, SheetResponse, Version
+from xivapi2.models import RowResult, SearchResult, Version
 from xivapi2.query import Language, QueryBuilder
 from xivapi2.utils import Throttler
 
@@ -32,10 +31,11 @@ class XivApiClient:
             print(sheet.fields["Name"])  # Lesser Panda
             print(sheet.fields["Description"])
     """
+
     def __init__(self):
         self.base_url = "https://v2.xivapi.com/api/"
         self._logger = logging.getLogger()
-        self._throttler = Throttler(5, 1.0)
+        self._throttler = Throttler(1, 1.0)
         self._session: aiohttp.ClientSession | None = None
 
     async def sheets(self) -> list[str]:
@@ -48,8 +48,9 @@ class XivApiClient:
         Returns:
             list[str]: A list of sheet names.
         """
-        resp = await self._request(f"{self.base_url}/sheet")
-        return [s["name"] for s in resp["sheets"]]
+        async with aiohttp.ClientSession(self.base_url) as session:
+            response = await self._request(session, "sheet")
+        return [s["name"] for s in response["sheets"]]
 
     async def sheet_rows(
         self,
@@ -95,7 +96,9 @@ class XivApiClient:
             if value is not None
         }
         async with aiohttp.ClientSession(self.base_url) as session:
-            response = await self._request(session, f"sheet/{sheet}?{urllib.parse.urlencode(query_params)}")
+            response = await self._request(
+                session, f"sheet/{sheet}?{urllib.parse.urlencode(query_params)}"
+            )
 
             index = 0
             while response["rows"]:
@@ -114,7 +117,9 @@ class XivApiClient:
                 query_params["after"] = response["rows"][-1]["row_id"]
                 if limit:
                     query_params["limit"] = limit - index
-                response = await self._request(session, f"sheet/{sheet}?{urllib.parse.urlencode(query_params)}")
+                response = await self._request(
+                    session, f"sheet/{sheet}?{urllib.parse.urlencode(query_params)}"
+                )
 
     async def get_sheet_row(
         self,
@@ -150,17 +155,18 @@ class XivApiClient:
             ]
             if value is not None
         }
-        response = await self._request(
-            f"{self.base_url}/sheet/{sheet}/{row}?{urllib.parse.urlencode(query_params)}"
-        )
-        return RowResult(
-            row_id=response["row_id"],
-            subrow_id=response.get("subrow_id"),
-            fields=response["fields"],
-            transient=response.get("transient"),
-        )
+        async with aiohttp.ClientSession(self.base_url) as session:
+            response = await self._request(
+                session, f"sheet/{sheet}/{row}?{urllib.parse.urlencode(query_params)}"
+            )
+            return RowResult(
+                row_id=response["row_id"],
+                subrow_id=response.get("subrow_id"),
+                fields=response["fields"],
+                transient=response.get("transient"),
+            )
 
-    async def search(self, query: QueryBuilder) -> SearchResponse:
+    async def search(self, query: QueryBuilder) -> AsyncGenerator[SearchResult]:
         """
         Searches for matching rows in a specific sheet using a query builder.
 
@@ -196,21 +202,30 @@ class XivApiClient:
         Returns:
             SearchResponse: An iterable containing the search results.
         """
-        response = await self._request(f"{self.base_url}/search?{query.build()}")
-        return SearchResponse(
-            schema=response["schema"],
-            results=[
-                SearchResult(
-                    score=result["score"],
-                    sheet=result["sheet"],
-                    row_id=result["row_id"],
-                    subrow_id=result.get("subrow_id"),
-                    fields=result["fields"],
-                    transient=result.get("transient"),
-                )
-                for result in response["results"]
-            ],
-        )
+        async with aiohttp.ClientSession(self.base_url) as session:
+            response = await self._request(session, f"search?{query.build()}")
+
+            index = 0
+            while True:
+                for result in response["results"]:
+                    yield SearchResult(
+                        score=result["score"],
+                        sheet=result["sheet"],
+                        row_id=result["row_id"],
+                        subrow_id=result.get("subrow_id"),
+                        fields=result["fields"],
+                        transient=result.get("transient"),
+                    )
+
+                    index += 1
+                    if query.get_limit() and index >= query.get_limit():
+                        return
+
+                cursor = response.get("next")
+                if cursor:
+                    response = await self._request(session, f"search?{query.build(cursor=cursor)}")
+                else:
+                    return
 
     async def get_asset(
         self, path: str, format_: Literal["jpg", "png", "webp"], *, version: str = None
@@ -229,9 +244,10 @@ class XivApiClient:
         query_params = {"path": path, "format": format_}
         if version:
             query_params["version"] = version
-        return await self._request(
-            f"{self.base_url}/asset?{urllib.parse.urlencode(query_params)}", asset=True
-        )
+        async with aiohttp.ClientSession(self.base_url) as session:
+            return await self._request(
+                session, f"asset?{urllib.parse.urlencode(query_params)}", asset=True
+            )
 
     async def get_map(self, territory: str, index: str, *, version: str | None = None) -> bytes:
         """
@@ -250,10 +266,12 @@ class XivApiClient:
         query_params = {}
         if version:
             query_params["version"] = version
-        return await self._request(
-            f"{self.base_url}/asset/map/{territory}/{index}?{urllib.parse.urlencode(query_params)}",
-            asset=True,
-        )
+        async with aiohttp.ClientSession(self.base_url) as session:
+            return await self._request(
+                session,
+                f"asset/map/{territory}/{index}?{urllib.parse.urlencode(query_params)}",
+                asset=True,
+            )
 
     async def versions(self):
         """
@@ -262,16 +280,23 @@ class XivApiClient:
         Returns:
             list[Version]: A list of versions understood by the API.
         """
-        response = await self._request(f"{self.base_url}/version")
+        async with aiohttp.ClientSession(self.base_url) as session:
+            response = await self._request(session, "version")
         return [Version(v["names"]) for v in response["versions"]]
 
     @overload
-    async def _request(self, session: aiohttp.ClientSession, url: str, asset: Literal[False] = False) -> dict: ...
+    async def _request(
+        self, session: aiohttp.ClientSession, url: str, asset: Literal[False] = False
+    ) -> dict: ...
 
     @overload
-    async def _request(self, session: aiohttp.ClientSession, url: str, asset: Literal[True]) -> bytes: ...
+    async def _request(
+        self, session: aiohttp.ClientSession, url: str, asset: Literal[True]
+    ) -> bytes: ...
 
-    async def _request(self, session: aiohttp.ClientSession, url: str, asset: bool = False) -> dict | bytes:
+    async def _request(
+        self, session: aiohttp.ClientSession, url: str, asset: bool = False
+    ) -> dict | bytes:
         self._logger.debug(f"Requesting: {url}")
         async with self._throttler:
             async with session.request("GET", url) as response:
@@ -291,18 +316,10 @@ class XivApiClient:
                         case 500:
                             raise XivApiServerError((await response.json()).get("message"))
                         case _:
-                            raise XivApiError(f"An unknown {response.status} error code was returned from XivApi")
+                            raise XivApiError(
+                                f"An unknown {response.status} error code was returned from XivApi"
+                            )
                 except aiohttp.ContentTypeError:
-                    raise XivApiError("An unknown error occurred while processing the response from XivApi")
-
-    @property
-    def session(self) -> aiohttp.ClientSession:
-        """
-        Returns the current aiohttp session. If no session exists, a new one will be created.
-
-        Returns:
-            aiohttp.ClientSession: The current aiohttp session.
-        """
-        if self._session is None:
-            self._session = aiohttp.ClientSession()
-        return self._session
+                    raise XivApiError(
+                        "An unknown error occurred while processing the response from XivApi"
+                    )

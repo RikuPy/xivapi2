@@ -5,9 +5,9 @@ from xivapi2 import XivApiClient
 
 @pytest.mark.asyncio
 async def test_sheet_rows(client: XivApiClient):
-    rows = await client.sheet_rows(
+    rows = [r async for r in client.sheet_rows(
         "Item", rows=[12056, 20530, 21911], fields=["Name", "Description"], language="en"
-    )
+    )]
     assert len(rows) == 3
     assert rows[0].row_id == 12056
     assert rows[0].fields["Name"] == "Lesser Panda"
@@ -18,3 +18,15 @@ async def test_sheet_rows(client: XivApiClient):
     assert rows[2].row_id == 21911
     assert rows[2].fields["Name"] == 'White Whittret'
     assert rows[2].fields["Description"]
+
+
+@pytest.mark.asyncio
+async def test_one_page(client: XivApiClient):
+    rows = [r async for r in client.sheet_rows("Item", fields=["Name"], limit=275)]
+    assert len(rows) == 275
+
+
+@pytest.mark.asyncio
+async def test_multiple_pages(client: XivApiClient):
+    rows = [r async for r in client.sheet_rows("Item", fields=["Name"], limit=625)]
+    assert len(rows) == 625

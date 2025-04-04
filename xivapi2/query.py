@@ -261,11 +261,23 @@ class QueryBuilder:
         self._schema = schema
         return self
 
-    def build(self) -> str:
+    def get_limit(self) -> int | None:
+        """
+        Returns the current limit set for the query.
+
+        Returns:
+            int | None: The current limit or None if not set.
+        """
+        return self._limit
+
+    def build(self, cursor: str | None = None) -> str:
         """
         .. warning:: This function is intended for internal use only.
 
         Builds the query string for the search.
+
+        Args:
+            cursor (str | None): The cursor for pagination.
 
         Returns:
             str: The compiled query string.
@@ -287,5 +299,7 @@ class QueryBuilder:
             query_params["language"] = self._lang
         if self._schema:
             query_params["schema"] = self._schema
+        if cursor:
+            query_params["cursor"] = cursor
 
         return urllib.parse.urlencode(query_params, quote_via=urllib.parse.quote)
