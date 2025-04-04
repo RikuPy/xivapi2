@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 __all__ = ["SearchResult", "SearchResponse", "RowResult", "SheetResponse", "Version"]
 
@@ -16,14 +16,14 @@ class SearchResult:
         row_id (int): The ID of the row.
         subrow_id (int | None): The subrow ID, when relevant.
         fields (dict): The fields of the search result.
-        transients (dict | None): Transient data, when relevant.
+        transients (dict): Transient data, when relevant.
     """
     score: float
     sheet: str
     row_id: int
     subrow_id: int | None = None
     fields: dict
-    transients: dict | None = None
+    transients: dict = field(default_factory=dict)
 
 
 @dataclass(kw_only=True)
@@ -60,12 +60,12 @@ class RowResult:
         row_id (int): The ID of the row.
         subrow_id (int | None): The subrow ID, when relevant.
         fields (dict): The fields of the row result.
-        transients (dict | None): Transient data, when relevant.
+        transients (dict): Transient data, when relevant.
     """
     row_id: int
     subrow_id: int | None = None
     fields: dict
-    transients: dict | None = None
+    transients: dict = field(default_factory=dict)
 
 
 @dataclass(kw_only=True)

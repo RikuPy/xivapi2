@@ -107,7 +107,7 @@ class XivApiClient:
                         row_id=row["row_id"],
                         subrow_id=row.get("subrow_id"),
                         fields=row["fields"],
-                        transients=row.get("transient"),
+                        transients=row.get("transient", {}),
                     )
 
                     index += 1
@@ -167,7 +167,7 @@ class XivApiClient:
                 row_id=response["row_id"],
                 subrow_id=response.get("subrow_id"),
                 fields=response["fields"],
-                transients=response.get("transient"),
+                transients=response.get("transient", {}),
             )
 
     async def search(self, query: QueryBuilder) -> AsyncGenerator[SearchResult, None]:
