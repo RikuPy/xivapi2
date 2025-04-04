@@ -21,6 +21,22 @@ async def test_sheet_rows(client: XivApiClient):
 
 
 @pytest.mark.asyncio
+async def test_sheet_rows_with_transients(client: XivApiClient):
+    rows = [r async for r in client.sheet_rows(
+        "Companion", rows=[141, 103], fields=["Singular"], transients=["Description", "DescriptionEnhanced"]
+    )]
+    assert len(rows) == 2
+    assert rows[0].row_id == 141
+    assert rows[0].fields["Singular"] == "lesser panda"
+    assert rows[0].transients["Description"]
+    assert rows[0].transients["DescriptionEnhanced"]
+    assert rows[1].row_id == 103
+    assert rows[1].fields["Singular"] == "panda cub"
+    assert rows[1].transients["Description"]
+    assert rows[1].transients["DescriptionEnhanced"]
+
+
+@pytest.mark.asyncio
 async def test_one_page(client: XivApiClient):
     rows = [r async for r in client.sheet_rows("Item", fields=["Name"], limit=275)]
     assert len(rows) == 275

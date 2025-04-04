@@ -60,7 +60,7 @@ class XivApiClient:
         fields: list[str] | None = None,
         after: int | None = None,
         limit: int | None = None,
-        transient: str | None = None,
+        transients: list[str] | None = None,
         language: Language | None = None,
         schema: str | None = None,
     ) -> AsyncGenerator[RowResult, None]:
@@ -75,7 +75,7 @@ class XivApiClient:
             fields (list[str] | None): A list of field names to retrieve. If not provided, all fields will be retrieved.
             after (int | None): The row ID to start retrieving from.
             limit (int | None): Maximum number of rows to return.
-            transient (str | None): Data fields to read for selected rows' transient row, if any is present.
+            transients (list[str] | None): Data fields to read for selected rows' transient row, if any is present.
             language (Language | None): The default language to use for the results.
             schema (str | None): The schema that row data should be read with.
 
@@ -89,7 +89,7 @@ class XivApiClient:
                 ("fields", ",".join(fields) if fields else None),
                 ("after", after),
                 ("limit", limit or 500),
-                ("transient", transient),
+                ("transient", ",".join(transients) if transients else None),
                 ("language", language),
                 ("schema", schema),
             ]
@@ -107,7 +107,7 @@ class XivApiClient:
                         row_id=row["row_id"],
                         subrow_id=row.get("subrow_id"),
                         fields=row["fields"],
-                        transient=row.get("transient"),
+                        transients=row.get("transient"),
                     )
 
                     index += 1
@@ -131,7 +131,7 @@ class XivApiClient:
         row: int,
         *,
         fields: list[str] | None = None,
-        transient: str | None = None,
+        transients: list[str] | None = None,
         language: Language | None = None,
         schema: str | None = None,
     ) -> RowResult:
@@ -142,7 +142,7 @@ class XivApiClient:
             sheet (str): The name of the sheet to query. This is case-sensitive.
             row (int): The ID of the row to retrieve.
             fields (list[str] | None): A list of field names to retrieve. If not provided, all fields will be retrieved.
-            transient (str | None): Data fields to read for selected rows' transient row, if any is present.
+            transients (list[str] | None): Data fields to read for selected rows' transient row, if any is present.
             language (Language | None): The default language to use for the results.
             schema (str | None): The schema that row data should be read with.
 
@@ -153,7 +153,7 @@ class XivApiClient:
             key: value
             for key, value in [
                 ("fields", ",".join(fields) if fields else None),
-                ("transient", transient),
+                ("transient", ",".join(transients) if transients else None),
                 ("language", language),
                 ("schema", schema),
             ]
@@ -167,7 +167,7 @@ class XivApiClient:
                 row_id=response["row_id"],
                 subrow_id=response.get("subrow_id"),
                 fields=response["fields"],
-                transient=response.get("transient"),
+                transients=response.get("transient"),
             )
 
     async def search(self, query: QueryBuilder) -> AsyncGenerator[SearchResult, None]:
@@ -219,7 +219,7 @@ class XivApiClient:
                         row_id=result["row_id"],
                         subrow_id=result.get("subrow_id"),
                         fields=result["fields"],
-                        transient=result.get("transient"),
+                        transients=result.get("transient"),
                     )
 
                     index += 1

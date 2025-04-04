@@ -16,14 +16,14 @@ class SearchResult:
         row_id (int): The ID of the row.
         subrow_id (int | None): The subrow ID, when relevant.
         fields (dict): The fields of the search result.
-        transient (dict | None): Transient data, when relevant.
+        transients (dict | None): Transient data, when relevant.
     """
     score: float
     sheet: str
     row_id: int
     subrow_id: int | None = None
     fields: dict
-    transient: dict | None = None
+    transients: dict | None = None
 
 
 @dataclass(kw_only=True)
@@ -60,12 +60,12 @@ class RowResult:
         row_id (int): The ID of the row.
         subrow_id (int | None): The subrow ID, when relevant.
         fields (dict): The fields of the row result.
-        transient (dict | None): Transient data, when relevant.
+        transients (dict | None): Transient data, when relevant.
     """
     row_id: int
     subrow_id: int | None = None
     fields: dict
-    transient: dict | None = None
+    transients: dict | None = None
 
 
 @dataclass(kw_only=True)
