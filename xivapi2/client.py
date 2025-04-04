@@ -1,4 +1,5 @@
 import logging
+import time
 import urllib.parse
 from typing import Literal, overload, Any, AsyncGenerator
 
@@ -13,6 +14,7 @@ from xivapi2.errors import (
 )
 from xivapi2.models import RowResult, SearchResponse, SearchResult, SheetResponse, Version
 from xivapi2.query import Language, QueryBuilder
+from xivapi2.utils import Throttler
 
 
 class XivApiClient:
@@ -33,6 +35,7 @@ class XivApiClient:
     def __init__(self):
         self.base_url = "https://v2.xivapi.com/api"
         self._logger = logging.getLogger()
+        self._throttler = Throttler(5, 1.0)
 
     async def sheets(self) -> list[str]:
         """
@@ -106,7 +109,7 @@ class XivApiClient:
 
                 index += 1
                 if limit and index >= limit:
-                    break
+                    return
 
             query_params["after"] = response["rows"][-1]["row_id"]
             if limit:
@@ -272,23 +275,24 @@ class XivApiClient:
 
     async def _request(self, url: str, asset: bool = False) -> dict | bytes:
         self._logger.debug(f"Requesting: {url}")
-        async with aiohttp.request("GET", url) as response:
-            try:
-                match response.status:
-                    case 200:
-                        if asset:
-                            return await response.read()
-                        else:
-                            return await response.json()
-                    case 400:
-                        raise XivApiParameterError((await response.json()).get("message"))
-                    case 404:
-                        raise XivApiNotFoundError((await response.json()).get("message"))
-                    case 429:
-                        raise XivApiRateLimitError((await response.json()).get("message"))
-                    case 500:
-                        raise XivApiServerError((await response.json()).get("message"))
-                    case _:
-                        raise XivApiError(f"An unknown {response.status} error code was returned from XivApi")
-            except aiohttp.ContentTypeError:
-                raise XivApiError("An unknown error occurred while processing the response from XivApi")
+        async with self._throttler:
+            async with aiohttp.request("GET", url) as response:
+                try:
+                    match response.status:
+                        case 200:
+                            if asset:
+                                return await response.read()
+                            else:
+                                return await response.json()
+                        case 400:
+                            raise XivApiParameterError((await response.json()).get("message"))
+                        case 404:
+                            raise XivApiNotFoundError((await response.json()).get("message"))
+                        case 429:
+                            raise XivApiRateLimitError((await response.json()).get("message"))
+                        case 500:
+                            raise XivApiServerError((await response.json()).get("message"))
+                        case _:
+                            raise XivApiError(f"An unknown {response.status} error code was returned from XivApi")
+                except aiohttp.ContentTypeError:
+                    raise XivApiError("An unknown error occurred while processing the response from XivApi")
