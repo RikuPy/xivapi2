@@ -17,6 +17,7 @@ class SearchResult:
         subrow_id (int | None): The subrow ID, when relevant.
         fields (dict): The fields of the search result.
         transients (dict): Transient data, when relevant.
+        schema (str): The canonical specifier for the schema used in this response.
     """
 
     score: float
@@ -25,6 +26,7 @@ class SearchResult:
     subrow_id: int | None = None
     fields: dict
     transients: dict = field(default_factory=dict)
+    schema: str
 
 
 @dataclass(kw_only=True, slots=True)
@@ -37,12 +39,14 @@ class RowResult:
         subrow_id (int | None): The subrow ID, when relevant.
         fields (dict): The fields of the row result.
         transients (dict): Transient data, when relevant.
+        schema (str): The canonical specifier for the schema used in this response.
     """
 
     row_id: int
     subrow_id: int | None = None
     fields: dict
     transients: dict = field(default_factory=dict)
+    schema: str
 
 
 @dataclass(slots=True)

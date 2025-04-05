@@ -24,6 +24,7 @@ async def test_search(client: XivApiClient):
         assert result.fields["Description"]
         assert "steak" in result.fields["Name"].lower()
         assert "eft" not in result.fields["Name"].lower()
+        assert result.schema
 
 
 async def test_paginated_search(client: XivApiClient):
