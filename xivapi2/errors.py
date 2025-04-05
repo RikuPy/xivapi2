@@ -6,7 +6,7 @@ class XivApiError(Exception):
     ...
 
 
-class XivApiNotFoundError(Exception):
+class XivApiNotFoundError(XivApiError):
     """
     Exception raised when a requested resource (sheet, row, etc.) is not found.
     """
@@ -14,7 +14,7 @@ class XivApiNotFoundError(Exception):
     ...
 
 
-class XivApiParameterError(Exception):
+class XivApiParameterError(XivApiError):
     """
     Exception raised when an invalid parameter is provided to the API.
     """
@@ -22,7 +22,7 @@ class XivApiParameterError(Exception):
     ...
 
 
-class XivApiRateLimitError(Exception):
+class XivApiRateLimitError(XivApiError):
     """
     Exception raised when the API rate limit is exceeded.
     """
@@ -30,7 +30,7 @@ class XivApiRateLimitError(Exception):
     ...
 
 
-class XivApiServerError(Exception):
+class XivApiServerError(XivApiError):
     """
     Exception raised when the XIVAPI server returns an internal server error.
     """
