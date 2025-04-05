@@ -85,7 +85,7 @@ class XivApiClient:
             schema (str | None): The schema that row data should be read with.
 
         Returns:
-            SheetResponse: An iterable containing a list of :meth:`RowResult`'s.
+            AsyncGenerator[RowResult, None]: An async generator yielding :meth:`RowResult`'s.
 
         Raises:
             XivApiNotFoundError: The requested sheet could not be found.
@@ -220,7 +220,7 @@ class XivApiClient:
             query (QueryBuilder): The query builder object containing the search parameters.
 
         Returns:
-            SearchResponse: An iterable containing the search results.
+            AsyncGenerator[SearchResult, None]: An async generator yielding :meth:`SearchResult`'s.
 
         Raises:
             XivApiParameterError: One or more of the passed search parameters were invalid.

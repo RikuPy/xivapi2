@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-__all__ = ["SearchResult", "SearchResponse", "RowResult", "SheetResponse", "Version"]
+__all__ = ["SearchResult", "RowResult", "Version"]
 
 
 @dataclass(kw_only=True, slots=True)
@@ -27,32 +27,6 @@ class SearchResult:
     transients: dict = field(default_factory=dict)
 
 
-@dataclass(kw_only=True)
-class SearchResponse:
-    """
-    Represents a search response. This can be iterated or indexed like a list.
-
-    Attributes:
-        schema (str): The schema of the search response.
-        results (list[SearchResult]): A list of search results.
-    """
-
-    schema: str
-    results: list[SearchResult]
-
-    def __bool__(self):
-        return bool(self.results)
-
-    def __getitem__(self, item):
-        return self.results[item]
-
-    def __iter__(self):
-        return iter(self.results)
-
-    def __len__(self):
-        return len(self.results)
-
-
 @dataclass(kw_only=True, slots=True)
 class RowResult:
     """
@@ -69,32 +43,6 @@ class RowResult:
     subrow_id: int | None = None
     fields: dict
     transients: dict = field(default_factory=dict)
-
-
-@dataclass(kw_only=True)
-class SheetResponse:
-    """
-    Represents a sheet response. This can be iterated or indexed like a list.
-
-    Attributes:
-        schema (str): The schema of the sheet response.
-        rows (list[RowResult]): A list of row results.
-    """
-
-    schema: str
-    rows: list[RowResult]
-
-    def __bool__(self):
-        return bool(self.rows)
-
-    def __getitem__(self, item):
-        return self.rows[item]
-
-    def __iter__(self):
-        return iter(self.rows)
-
-    def __len__(self):
-        return len(self.rows)
 
 
 @dataclass(slots=True)
