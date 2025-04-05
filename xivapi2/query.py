@@ -94,16 +94,16 @@ class QueryBuilder:
         .. code:: python
 
             query = (
-                QueryBuilder("Item")  # Query the "Item" sheet
-                .add_fields("Name", "Description")  # Include the Name and Description fields in the results
-                .filter("IsUntradable", "=", False)  # Can be traded
+                QueryBuilder("Item")
+                .add_fields("Name", "Description")
+                .filter("IsUntradable", "=", False)
                 .filter(
                     FilterGroup()
-                    .filter("Name", "~", "Steak")  # Contains "Steak"
-                    .filter("Name", "~", "eft", exclude=True)  # But does not contain "eft"
+                    .filter("Name", "~", "Gemdraught")
+                    .filter("Name", "~", "Vitality", exclude=True)
                 )
                 .set_version(7.2)
-                .limit(10)
+                .limit(100)
             )
     """
 

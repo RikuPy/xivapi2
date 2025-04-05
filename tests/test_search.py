@@ -9,11 +9,10 @@ async def test_search(client: XivApiClient):
         .filter("IsUntradable", "=", False)
         .filter(
             FilterGroup()
-            .filter("Name", "~", "Steak")
-            .filter("Name", "~", "eft", exclude=True)
+            .filter("Name", "~", "Gemdraught")
+            .filter("Name", "~", "Vitality", exclude=True)
         )
         .set_version(7.2)
-        .limit(10)
     )
     # fmt: on
 
@@ -22,8 +21,8 @@ async def test_search(client: XivApiClient):
     for result in results:
         assert result.fields["Name"]
         assert result.fields["Description"]
-        assert "steak" in result.fields["Name"].lower()
-        assert "eft" not in result.fields["Name"].lower()
+        assert "gemdraught" in result.fields["Name"].lower()
+        assert "vitality" not in result.fields["Name"].lower()
         assert result.schema
 
 
