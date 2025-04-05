@@ -46,7 +46,7 @@ class FilterGroup:
     """
     A class used to build grouped filter clauses for a search query.
 
-    For more information on how grouped clauses work, refer to the XivAPI documentation:
+    For more information on how grouped clauses work, refer to the xivapi documentation:
     https://v2.xivapi.com/docs/guides/search/#filtering-results
     """
 

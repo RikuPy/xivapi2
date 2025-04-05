@@ -20,7 +20,7 @@ __all__ = ["XivApiClient"]
 
 class XivApiClient:
     """
-    An asynchronous client for `XivAPIv2 <https://v2.xivapi.com/>`__.
+    An asynchronous client for `v2.xivapi.com <https://v2.xivapi.com/>`__.
 
     Example:
         .. code:: python
@@ -258,7 +258,7 @@ class XivApiClient:
         self, path: str, format_: Literal["jpg", "png", "webp"], *, version: str | None = None
     ) -> bytes:
         """
-        Retrieves an asset from the XivAPI as bytes.
+        Retrieves an asset from xivapi as bytes.
 
         Args:
             path (str): The path to the asset. Paths to icons and other assets can be found in their relevant sheets.
