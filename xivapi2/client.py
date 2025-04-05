@@ -240,7 +240,7 @@ class XivApiClient:
                         row_id=result["row_id"],
                         subrow_id=result.get("subrow_id"),
                         fields=result["fields"],
-                        transients=result.get("transient"),
+                        transients=result.get("transient", {}),
                         schema=response["schema"]
                     )
 
