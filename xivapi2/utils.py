@@ -23,7 +23,7 @@ class Throttler:
         self.rate_limit = rate_limit
         self.period = period
 
-        self._logger = logging.getLogger()
+        self._logger = logging.getLogger(__name__)
         self._task_logs: Deque[float] = deque()
 
     def flush(self):

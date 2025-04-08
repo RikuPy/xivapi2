@@ -36,7 +36,7 @@ class XivApiClient:
 
     def __init__(self):
         self.base_url = "https://v2.xivapi.com/api/"
-        self._logger = logging.getLogger()
+        self._logger = logging.getLogger(__name__)
         self._throttler = Throttler(5, 1.0)
         self._session: aiohttp.ClientSession | None = None
 
